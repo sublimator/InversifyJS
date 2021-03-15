@@ -403,28 +403,9 @@ class Container implements interfaces.Container {
             return;
         }
 
-        try {
-            if (this._deactivations.hasKey(binding.serviceIdentifier)) {
-                const deactivations = iter || this._deactivations.get(binding.serviceIdentifier).entries();
-
-                let deact = deactivations.next();
-
-                while (deact.value) {
-                    const result = deact.value[1](instance);
-
-                    if (isPromise(result)) {
-                        return result.then(() => {
-                            this.doDeactivation(binding, instance, deactivations);
-                        }).catch((ex) => {
-                            throw new Error(ERROR_MSGS.ON_DEACTIVATION_ERROR(constr.name, ex.message));
-                        });
-                    }
-
-                    deact = deactivations.next();
-                }
-            }
-        } catch (ex) {
-            throw new Error(ERROR_MSGS.ON_DEACTIVATION_ERROR(constr.name, ex.message));
+        const async = this._doAsyncDeactivations(constr, binding, instance, iter)
+        if (async) {
+            return async
         }
 
         if (this.parent) {
@@ -441,6 +422,35 @@ class Container implements interfaces.Container {
             }
 
             return this.destroyMetadata(constr, instance);
+        } catch (ex) {
+            throw new Error(ERROR_MSGS.ON_DEACTIVATION_ERROR(constr.name, ex.message));
+        }
+    }
+
+    private _doAsyncDeactivations<T>(constr: any,
+                                binding: Binding<T>,
+                                instance: T,
+                                iter?: IterableIterator<[number, interfaces.BindingDeactivation<any>]>) {
+        try {
+            if (this._deactivations.hasKey(binding.serviceIdentifier)) {
+                const deactivations = iter || this._deactivations.get(binding.serviceIdentifier).entries();
+
+                let deact = deactivations.next();
+
+                while (deact.value) {
+                    const result = deact.value[1](instance);
+
+                    if (isPromise(result)) {
+                        return result.then(() => {
+                            this._doAsyncDeactivations(constr, binding, instance, deactivations);
+                        }).catch((ex) => {
+                            throw new Error(ERROR_MSGS.ON_DEACTIVATION_ERROR(constr.name, ex.message));
+                        });
+                    }
+
+                    deact = deactivations.next();
+                }
+            }
         } catch (ex) {
             throw new Error(ERROR_MSGS.ON_DEACTIVATION_ERROR(constr.name, ex.message));
         }
