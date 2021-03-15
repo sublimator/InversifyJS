@@ -174,14 +174,7 @@ class Container implements interfaces.Container {
     public unbind(serviceIdentifier: interfaces.ServiceIdentifier<any>): void {
         if (this._bindingDictionary.hasKey(serviceIdentifier)) {
             const bindings = this._bindingDictionary.get(serviceIdentifier);
-
-            for (const binding of bindings) {
-                const result = this.preDestroy(binding);
-
-                if (isPromise(result)) {
-                    throw new Error(ERROR_MSGS.ASYNC_UNBIND_REQUIRED);
-                }
-            }
+            this._preDestroyBindingsSync(bindings)
         }
 
         try {
@@ -209,17 +202,21 @@ class Container implements interfaces.Container {
 
     // Removes all the type bindings from the registry
     public unbindAll(): void {
-        this._bindingDictionary.traverse((key, value) => {
-            for (const binding of value) {
-                const result = this.preDestroy(binding);
-
-                if (isPromise(result)) {
-                    throw new Error(ERROR_MSGS.ASYNC_UNBIND_REQUIRED);
-                }
-            }
+        this._bindingDictionary.traverse((key, bindings) => {
+            this._preDestroyBindingsSync(bindings)
         });
 
         this._bindingDictionary = new Lookup<Binding<any>>();
+    }
+
+    private _preDestroyBindingsSync(bindings: interfaces.Binding<any>[]) {
+        for (const binding of bindings) {
+            const result = this.preDestroy(binding)
+
+            if (isPromise(result)) {
+                throw new Error(ERROR_MSGS.ASYNC_UNBIND_REQUIRED)
+            }
+        }
     }
 
     public async unbindAllAsync(): Promise<void> {

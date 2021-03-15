@@ -227,14 +227,10 @@ namespace interfaces {
         onDeactivation: interfaces.Container["onDeactivation"]
     ) => void;
 
-    export type AsyncContainerModuleCallBack = (
-        bind: interfaces.Bind,
-        unbind: interfaces.Unbind,
-        isBound: interfaces.IsBound,
-        rebind: interfaces.Rebind,
-        onActivation: interfaces.Container["onActivation"],
-        onDeactivation: interfaces.Container["onDeactivation"]
-    ) => Promise<void>;
+    // Currently this the same, but may not be in the future
+    // TODO: is this just a vestige of early design assumptions that
+    //  didn't pan out? CodeClimate complained about it
+    export type AsyncContainerModuleCallBack = ContainerModuleCallBack
 
     export interface ContainerSnapshot {
         bindings: Lookup<Binding<any>>;
